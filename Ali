@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cennetin Kapısı - 8. Sınıf Din Kültürü Quiz</title>
+    <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+            color: #ffcccc; 
+            transition: background-color 1.5s ease; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            position: relative; 
+            background-color: #1a0000; 
+        }
+        #game-container { 
+            background: rgba(20, 0, 0, 0.9); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border: 2px solid #660000; 
+            box-shadow: 0 0 20px #ff3333; 
+            max-width: 600px; 
+            width: 100%; 
+            z-index: 10; 
+            box-sizing: border-box; 
+            position: relative;
+        }
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        button { 
+            background-color: #8b0000; 
+            color: #ffcccc; 
+            padding: 15px; 
+            border: 1px solid #ff3333; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold; 
+            transition: 0.2s; 
+        }
+        button:hover:not(:disabled) { background-color: #ff3333; color: #1a0000; }
+        button:disabled { background-color: #330000; color: #666; cursor: not-allowed; border-color: #444; }
+        
+        .lifelines { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        #lifeline-5050 { background-color: #cc6600; }
+        #lifeline-expert { background-color: #0066cc; }
+        #expert-advice { margin-top: 15px; font-weight: bold; color: #ff9933; min-height: 20px; }
+        
+        .shop { margin-top: 20px; border-top: 1px solid #660000; padding-top: 15px; }
+        .timer { font-size: 24px; color: #ffff00; margin-bottom: 20px; font-weight: bold; }
+        .hidden { display: none !important; }
+        
+        .animated-bird { 
+            position: absolute; 
+            font-size: 28px; 
+            pointer-events: none; 
+            z-index: 1;
+            bottom: -50px;
+            animation: flyUp 8s linear forwards;
+        }
+        @keyframes flyUp { 
+            0% { transform: translateY(0) translateX(0); opacity: 1; } 
+            50% { transform: translateY(-50vh) translateX(50px); }
+            100% { transform: translateY(-110vh) translateX(-50px); opacity: 0; } 
+        }
+        
+        select, input[type="text"] { 
+            background-color: #8b0000; 
+            color: #ffcccc; 
+            padding: 10px; 
+            border: 1px solid #ff3333; 
+            border-radius: 5px; 
+            font-size: 16px; 
+            margin-bottom: 20px; 
+            width: 80%; 
+            box-sizing: border-box; 
+        }
+        input[type="text"]::placeholder { color: #ffaaaa; }
+        .producer { margin-top: 15px; font-size: 14px; color: #999999; }
+        
+        #feedback {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            min-height: 25px;
+        }
+        .correct-text { color: #00ff00; }
+        .wrong-text { color: #ff3333; }
+    </style>
+</head>
+<body id="body">
+
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>Cennetin Kapısını Kazan</h1>
+            <p>Ruhunu teslim etme! Lütfen adını gir ve bir sunucu seç.</p>
+            <input type="text" id="user-name" placeholder="Adınız">
+            <br>
+            <label for="server-select">Sunucu Seçin:</label><br><br>
+            <select id="server-select">
+                <option value="Sunucu 1 (Avrasya)">Avrasya</option>
+                <option value="Sunucu 2 (Asya)">Asya</option>
+                <option value="Sunucu 3 (Anadolu)">Anadolu</option>
+            </select>
+            <br>
+            <button onclick="startGame()">Savaşa Başla</button>
+            <div class="producer">Yapımcı: Ali Ragıp Kayabaşı</div>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <h2 id="level-title"></h2>
+            <div class="timer">Kalan Süre: <span id="time-left">30</span></div>
+            <h3>Senin Canın: <span id="user-health">5</span></h3>
+            <h3>XP: <span id="user-xp">0</span></h3>
+            <h3>Cin Canı: <span id="enemy-health">5</span></h3>
+            <p id="question" style="font-size: 18px; font-weight: bold; min-height: 50px;"></p>
+            
+            <div class="options" id="options"></div>
+            <div id="feedback"></div>
+            
+            <div class="lifelines">
+                <button id="lifeline-5050" onclick="use5050()">Yarı Yarıya</button>
+                <button id="lifeline-expert" onclick="useExpert()">Telefonda Joker: Nurullah Hoca</button>
+            </div>
+            <p id="expert-advice"></p>
+
+            <div class="shop">
+                <h3>Mağaza</h3>
+                <p>1 Can = 30 XP</p>
+                <button onclick="buyHealth()">Can Satın Al</button>
+            </div>
+        </div>
+
+        <div id="end-screen" class="hidden">
+            <h1 id="end-message"></h1>
+            <button onclick="resetAndRestart()">Yeni Baştan</button>
+        </div>
+    </div>
+
+    <script>
+        const hellColors = [
+            "#1a0000", "#260000", "#330000", "#400000", 
+            "#4d0000", "#660000", "#800000", "#990000", 
+            "#b30000", "#cc0000"
+        ];
+
+        const enemies = [
+            "Cin Muhafız 1", "Cin Muhafız 2", "Cin Muhafız 3", 
+            "Cin Muhafız 4", "Cin Muhafız 5", "Cin Muhafız 6", 
+            "Cin Muhafız 7", "Cin Muhafız 8", "Cin Muhafız 9", 
+            "Büyük Patron: Şeytan"
+        ];
+
+        // LGS Müfredatına uygun orta düzey sorular
+        const questionsList = [
+            {q: "Temel ihtiyaçları dışında sahip olduğu malı nisap miktarına ulaşan bir Müslümanın, hicri olarak bir yıl geçtikten sonra bu maldan belirli bir oranda fakirlere vermesine ne denir?", a: "Sadaka", b: "Zekât", c: "Fitre", d: "Hac", correct: "B"}, 
+            {q: "Allah’ın olmuş ve olacak her şeyi, zaman ve mekan sınırı olmadan bilmesi ve takdir etmesi sıfatı hangisidir?", a: "İrade", b: "Kudret", c: "İlim", d: "Kelam", correct: "C"},
+            {q: "Hz. Muhammed’in (s.a.v.) bir konuda karar verirken istişare etmeye önem vermesi, onun hangi özelliğini gösterir?", a: "Merhametli oluşunu", b: "Kararlılığını", c: "Danışarak iş yaptığını", d: "Güvenilir oluşunu", correct: "C"},
+            {q: "Evrendeki her şeyin bir ölçü, düzen ve uyum içerisinde yaratılmış olmasına ne ad verilir?", a: "Tevekkül", b: "Kader", c: "Sünnetullah", d: "Rızık", correct: "C"}
+        ];
+
+        let userName = "", userHealth = 5, enemyHealth = 5, currentLevel = 1, currentQuestionIndex = 0;
+        let used5050 = false, usedExpert = false;
+        let activeQuestions = [];
+        let currentOptions = []; 
+        let userXp = 0;
+        let timer = null;
+        let timeLeft = 30;
+        let selectedServer = "";
+        let isAnswering = false;
+
+        function saveGame() {
+            localStorage.setItem("player_data", JSON.stringify({
+                name: userName, health: userHealth, level: currentLevel, xp: userXp, server: selectedServer
+            }));
+        }
+
+        function loadGame() {
+            try { return JSON.parse(localStorage.getItem("player_data")); } 
+            catch(e) { return null; }
+        }
+
+        function startGame() {
+            let savedData = loadGame();
+            if (savedData && savedData.name) {
+                userName = savedData.name;
+                userHealth = savedData.health;
+                currentLevel = savedData.level;
+                userXp = savedData.xp;
+                selectedServer = savedData.server;
+            } else {
+                userName = document.getElementById("user-name").value.trim();
+                selectedServer = document.getElementById("server-select").value;
+                if (!userName) {
+                    alert("Lütfen adını yaz.");
+                    return;
+                }
+            }
+            enterGame();
+        }
+
+        function enterGame() {
+            document.getElementById("start-screen").classList.add("hidden");
+            document.getElementById("quiz-screen").classList.remove("hidden");
+            updateUI();
+            loadLevel();
+            startBirdAnimation();
+        }
+
+        function updateUI() {
+            document.getElementById("user-health").innerText = userHealth;
+            document.getElementById("user-xp").innerText = userXp;
+            document.getElementById("enemy-health").innerText = enemyHealth;
+        }
+
+        function loadLevel() {
+            if (currentLevel > 10) return endGame(true);
+            
+            document.getElementById("body").style.backgroundColor = hellColors[Math.min(currentLevel - 1, hellColors.length - 1)];
+            document.getElementById("level-title").innerText = `Bölüm ${currentLevel}: ${enemies[currentLevel - 1]}`;
+            
+            const questionCountPerLevel = (currentLevel === 10) ? 15 : 10;
+            
+            activeQuestions = [];
+            while(activeQuestions.length < questionCountPerLevel) {
+                let temp = [...questionsList];
+                shuffleArray(temp);
+                activeQuestions.push(...temp);
+            }
+            activeQuestions = activeQuestions.slice(0, questionCountPerLevel);
+            
+            enemyHealth = questionCountPerLevel; 
+            currentQuestionIndex = 0;
+            loadNextQuestion();
+        }
+
+        function loadNextQuestion() {
+            isAnswering = false;
+            used5050 = false;
+            usedExpert = false;
+            document.getElementById("lifeline-5050").disabled = false;
+            document.getElementById("lifeline-expert").disabled = false;
+            document.getElementById("expert-advice").innerText = "";
+            document.getElementById("feedback").innerText = "";
+            
+            resetTimer();
+            showQuestion();
+            updateUI();
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            timeLeft = 30;
+            document.getElementById("time-left").innerText = timeLeft;
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById("time-left").innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeOut();
+                }
+            }, 1000);
+        }
+
+        function startBirdAnimation() {
+            setInterval(() => {
+                const bird = document.createElement("div");
+                bird.classList.add("animated-bird");
+                bird.innerText = Math.random() > 0.5 ? "🕊️" : "🐦";
+                bird.style.left = Math.random() * 85 + 5 + "vw";
+                bird.style.animationDuration = (Math.random() * 3 + 5) + "s";
+                document.body.appendChild(bird);
+                setTimeout(() => { bird.remove(); }, 8000);
+            }, 2500);
+        }
+
+        function timeOut() {
+            showFeedback("Süre bitti!", false);
+            wrongAnswerEffect();
+        }
+
+        function wrongAnswerEffect() {
+            userHealth -= 1;
+            updateUI();
+            if (userHealth <= 0) {
+                setTimeout(() => endGame(false), 1200);
+                return;
+            }
+            setTimeout(nextQuestionLogic, 1200);
+        }
+
+        function nextQuestionLogic() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex >= activeQuestions.length) {
+                currentLevel++;
+                if (currentLevel <= 10) {
+                    saveGame();
+                    loadLevel();
+                } else {
+                    endGame(true);
+                }
+            } else {
+                loadNextQuestion();
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function showQuestion() {
+            let qData = activeQuestions[currentQuestionIndex];
+            document.getElementById("question").innerText = qData.q;
+            
+            currentOptions = [
+                {key: 'A', value: qData.a},
+                {key: 'B', value: qData.b},
+                {key: 'C', value: qData.c},
+                {key: 'D', value: qData.d}
+            ];
+            
+            renderOptions();
+        }
+
+        function renderOptions() {
+            let optionsHtml = "";
+            let qData = activeQuestions[currentQuestionIndex];
+            
+            currentOptions.forEach(opt => {
+                optionsHtml += `<button class="opt-btn" onclick="answer('${qData.correct}', '${opt.key}')">${opt.key}) ${opt.value}</button>`;
+            });
+            document.getElementById("options").innerHTML = optionsHtml;
+        }
+
+        function showFeedback(text, isSuccess) {
+            const fb = document.getElementById("feedback");
+            fb.innerText = text;
+            fb.className = isSuccess ? "correct-text" : "wrong-text";
+        }
+
+        function answer(correct, choice) {
+            if (isAnswering) return;
+            isAnswering = true;
+            clearInterval(timer);
+
+            const btns = document.querySelectorAll(".opt-btn");
+            btns.forEach(b => b.disabled = true);
+
+            let isCorrect = (choice === correct);
+
+            if (isCorrect) {
+                showFeedback("Doğru! Düşmana 1 hasar verildi.", true);
+                enemyHealth -= 1;
+                userXp += 10;
+                updateUI();
+                
+                if (enemyHealth <= 0) {
+                    currentLevel++;
+                    if (currentLevel <= 10) {
+                        saveGame();
+                        setTimeout(() => loadLevel(), 1200);
+                    } else {
+                        setTimeout(() => endGame(true), 1200);
+                    }
+                } else {
+                    setTimeout(nextQuestionLogic, 1200);
+                }
+            } else {
+                showFeedback("Yanlış cevap! 1 can kaybettiniz.", false);
+                wrongAnswerEffect();
+            }
+        }
+
+        function use5050() {
+            if (used5050 || isAnswering) return;
+            used5050 = true;
+            document.getElementById("lifeline-5050").disabled = true;
+            
+            let qData = activeQuestions[currentQuestionIndex];
+            let correctOption = qData.correct;
+            
+            let wrongOptions = currentOptions.filter(opt => opt.key !== correctOption);
+            shuffleArray(wrongOptions);
+            
+            currentOptions = currentOptions.filter(opt => opt.key === correctOption || opt.key === wrongOptions[0].key);
+            renderOptions();
+        }
+
+        function useExpert() {
+            if (usedExpert || isAnswering) return;
+            usedExpert = true;
+            document.getElementById("lifeline-expert").disabled = true;
+            let correct = activeQuestions[currentQuestionIndex].correct;
+            document.getElementById("expert-advice").innerText = `Nurullah Hoca tavsiyesi: Kesin cevap ${correct}!`;
+        }
+
+        function buyHealth() {
+            if (userXp >= 30) {
+                userXp -= 30;
+                userHealth += 1;
+                showFeedback("1 Can Satın Alındı!", true);
+                updateUI();
+                saveGame();
+            } else {
+                showFeedback("Yetersiz XP!", false);
+            }
+        }
+
+        function endGame(won) {
+            clearInterval(timer);
+            document.getElementById("quiz-screen").classList.add("hidden");
+            document.getElementById("end-screen").classList.remove("hidden");
+            document.getElementById("end-message").innerText = won ? "TEBRİKLER! Cennetin kapısını kazanmayı başardın!" : "OYUN BİTTİ! Yoldan saptın.";
+            localStorage.removeItem("player_data");
+        }
+
+        function resetAndRestart() {
+            localStorage.removeItem("player_data");
+            location.reload();
+        }
+    </script>
+</body>
+</html>
